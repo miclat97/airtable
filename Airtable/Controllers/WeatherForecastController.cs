@@ -211,7 +211,7 @@ namespace Airtable.Controllers
 
                                             newInsert.Add(""test1"", ""as"");
 
-                                            client.GetDatabase(""test"").GetCollection<BsonDocument>(""test2"").InsertOne(newInsert);
+                                            client.GetDatabase(""test"").GetCollection<BsonDocument>(""test1"").InsertOne(newInsert);
                                         }
                                     }"));
 
@@ -283,6 +283,69 @@ namespace Airtable.Controllers
 
             GC.Collect();
             return Ok();
+        }
+
+
+        [HttpPost("CheckCSharpCode")]
+        public async Task<IActionResult> CheckCSharpCode()
+        {
+            string code = "";
+
+            using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
+            {
+                code = await reader.ReadToEndAsync();
+            }
+
+            var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
+
+            CSharpCompilation localCompilationTest = CSharpCompilation.Create("AssemblyName")
+                .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+                .AddReferences(
+                    MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(Console).GetTypeInfo().Assembly.Location),
+                    MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Driver.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Driver.Core.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Bson.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "mscorlib.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "netstandard.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Linq.Expressions.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Threading.Tasks.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")));
+
+            localCompilationTest.AddSyntaxTrees(CSharpSyntaxTree.ParseText(
+                                    @"using MongoDB.Driver;
+                                    using MongoDB.Bson;
+                                    using System.Linq;
+                                    dasdasdasdsa
+                                    public static class ClassName 
+                                    { 
+                                        public static void MethodName()
+                                        {
+                                            var client = new MongoClient(""mongodb://localhost:27017"");
+
+
+                                            var newInsert = new BsonDocument();
+
+                                            newInsert.Add(""test1"", ""as"");
+
+                                            client.GetDatabase(""test"").GetCollection<BsonDocument>(""test2"").InsertOne(newInsert);
+                                        }
+                                    }"
+                ));
+
+            using (var memoryStream = new MemoryStream())
+            {
+                var emitResult = localCompilationTest.Emit(memoryStream);
+                var assembly = Assembly.Load(memoryStream.ToArray());
+                if (emitResult.Success)
+                {
+                    return Ok("Compilation successful!");
+                }
+                else
+                {
+                    return StatusCode(415, localCompilationTest.GetDiagnostics());
+                }
+            }
         }
 
         //        [HttpGet("assembliesFromWorkingDirectory")]
