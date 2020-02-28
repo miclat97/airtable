@@ -31,7 +31,7 @@ namespace Airtable.Controllers
 
         private readonly ILogger<WeatherForecastController> _logger;
 
-        private CSharpCompilation _cSharpCompilation;
+        //private CSharpCompilation _cSharpCompilation;
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
@@ -39,19 +39,19 @@ namespace Airtable.Controllers
 
             var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
 
-            _cSharpCompilation = CSharpCompilation.Create("AssemblyName")
-                .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
-                .AddReferences(
-                    MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
-                    MetadataReference.CreateFromFile(typeof(Console).GetTypeInfo().Assembly.Location),
-                    MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Driver.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Driver.Core.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Bson.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "mscorlib.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "netstandard.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Linq.Expressions.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Threading.Tasks.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")));
+            //_cSharpCompilation = CSharpCompilation.Create("AssemblyName")
+            //    .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+            //    .AddReferences(
+            //        MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
+            //        MetadataReference.CreateFromFile(typeof(Console).GetTypeInfo().Assembly.Location),
+            //        MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Driver.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Driver.Core.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine("C:\\dotnet", "MongoDB.Bson.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "mscorlib.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "netstandard.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Linq.Expressions.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Threading.Tasks.dll")),
+            //        MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")));
         }
 
         [HttpGet]
@@ -93,62 +93,6 @@ namespace Airtable.Controllers
             return Ok(add);
         }
 
-        [HttpPost("jsString/{functionName}/{firstNumber}/{secondNumber}")]
-        public async Task<IActionResult> ExecuteJavaScriptCodeString([FromServices] INodeServices nodeServices, [FromRoute] string functionName, [FromRoute] string firstNumber, [FromRoute] string secondNumber)
-        {
-            string jsCode = "";
-            using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
-            {
-                jsCode = await reader.ReadToEndAsync();
-            }
-
-            using (StringAsTempFile temp = new StringAsTempFile(jsCode, CancellationToken.None))
-            {
-                try
-                {
-                    return Ok(await nodeServices.InvokeAsync<object>(temp.FileName, functionName, int.Parse(firstNumber), int.Parse(secondNumber)));
-                }
-                catch (Exception ex)
-                {
-                    return StatusCode(415, ex.StackTrace);
-                }
-            }
-        }
-
-        [HttpPost("jsConnect/{functionName}")]
-        public async Task<IActionResult> ExecuteJavaScriptWithConnectionToMongoDb([FromServices] INodeServices nodeServices, [FromRoute] string functionName)
-        {
-            string sendedJsCode = "";
-            string createMongoClientLine = "var MongoClient = require('mongodb').MongoClient;";
-            string connectionStringLine = "var url = \"mongodb://localhost:27017/\";";
-            string appendToFunctionLine = "module.exports.MongoClient.connect(url, ";
-            string endingLine = "});";
-
-            using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
-            {
-                sendedJsCode = await reader.ReadToEndAsync();
-            }
-
-            StringBuilder codeToExecuteBuilder = new StringBuilder(createMongoClientLine);
-            codeToExecuteBuilder.Append(Environment.NewLine);
-            codeToExecuteBuilder.Append(connectionStringLine);
-            codeToExecuteBuilder.Append(Environment.NewLine);
-            codeToExecuteBuilder.Append(appendToFunctionLine);
-            codeToExecuteBuilder.Append(sendedJsCode);
-            codeToExecuteBuilder.Append(Environment.NewLine);
-            codeToExecuteBuilder.Append(endingLine);
-
-            string jsToExecute = codeToExecuteBuilder.ToString();
-
-            object result;
-
-            using (StringAsTempFile temp = new StringAsTempFile(jsToExecute, CancellationToken.None))
-            {
-                result = await nodeServices.InvokeExportAsync<object>(temp.FileName, functionName);
-            }
-
-            return Ok(result);
-        }
 
         [HttpGet("mongojs")]
         public async Task<IActionResult> MongoJs([FromServices] INodeServices nodeServices)
@@ -166,22 +110,10 @@ namespace Airtable.Controllers
 
             newInsert.Add("test1", "as");
 
-            client.GetDatabase("test").GetCollection<BsonDocument>("test").InsertOne(newInsert);
+            client.GetDatabase("test").GetCollection<BsonDocument>("test1").InsertOne(newInsert);
 
-            return Ok(client.GetDatabase("test").GetCollection<BsonDocument>("test").Find(new BsonDocument()).ToJson());
+            return Ok(client.GetDatabase("test").GetCollection<BsonDocument>("test1").Find(new BsonDocument()).ToJson());
         }
-
-        //[HttpGet("mongodb/{val1}/{val2}")]
-        //public IActionResult MongoDbValues([FromRoute] string val1, [FromRoute] string val2)
-        //{
-        //    var client = new MongoClient("mongodb://localhost:27017");
-
-        //    var newInsert = new BsonDocument().Add(val1, val2);
-
-        //    client.GetDatabase("test").GetCollection<BsonDocument>("test").InsertOne(newInsert);
-
-        //    return Ok($"Value inserted: {val1} : {val2}");
-        //}
 
         [HttpPost("csharp")]
         public async Task<IActionResult> Csharp()
@@ -195,25 +127,25 @@ namespace Airtable.Controllers
             //                   client.GetDatabase(""test"").GetCollection<BsonDocument>(""test2"").InsertOne(newInsert);
             //";
 
-            _cSharpCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(
-                            @"using MongoDB.Driver;
-                                    using MongoDB.Bson;
-                                    using System.Linq;
+            //_cSharpCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(
+            //                @"using MongoDB.Driver;
+            //                        using MongoDB.Bson;
+            //                        using System.Linq;
 
-                                    public static class ClassName 
-                                    { 
-                                        public static void MethodName()
-                                        {
-                                            var client = new MongoClient(""mongodb://localhost:27017"");
+            //                        public static class ClassName 
+            //                        { 
+            //                            public static void MethodName()
+            //                            {
+            //                                var client = new MongoClient(""mongodb://localhost:27017"");
 
 
-                                            var newInsert = new BsonDocument();
+            //                                var newInsert = new BsonDocument();
 
-                                            newInsert.Add(""test1"", ""as"");
+            //                                newInsert.Add(""test1"", ""as"");
 
-                                            client.GetDatabase(""test"").GetCollection<BsonDocument>(""test1"").InsertOne(newInsert);
-                                        }
-                                    }"));
+            //                                client.GetDatabase(""test"").GetCollection<BsonDocument>(""test1"").InsertOne(newInsert);
+            //                            }
+            //                        }"));
 
             //var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
 
@@ -263,23 +195,23 @@ namespace Airtable.Controllers
             //}
 
 
-            using (var memoryStream = new MemoryStream())
-            {
-                var emitResult = _cSharpCompilation.Emit(memoryStream);
-                if (emitResult.Success)
-                {
-                    //var context = AssemblyLoadContext.Default;
-                    //var assembly = context.LoadFromStream(memoryStream);
+            //using (var memoryStream = new MemoryStream())
+            //{
+            //    var emitResult = _cSharpCompilation.Emit(memoryStream);
+            //    if (emitResult.Success)
+            //    {
+            //        //var context = AssemblyLoadContext.Default;
+            //        //var assembly = context.LoadFromStream(memoryStream);
 
-                    var assembly = Assembly.Load(memoryStream.ToArray());
+            //        var assembly = Assembly.Load(memoryStream.ToArray());
 
-                    assembly.GetType("ClassName").GetMethod("MethodName").Invoke(null, null);
-                }
-                else
-                {
-                    return StatusCode(500, "Error compilation");
-                }
-            }
+            //        assembly.GetType("ClassName").GetMethod("MethodName").Invoke(null, null);
+            //    }
+            //    else
+            //    {
+            //        return StatusCode(500, "Error compilation");
+            //    }
+            //}
 
             GC.Collect();
             return Ok();
@@ -298,6 +230,19 @@ namespace Airtable.Controllers
 
             var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
 
+            //var xyz = new CSharpCodeProvider();
+
+            //var compiler = xyz.CreateCompiler();
+
+            //System.CodeDom.Compiler.CompilerParameters parameters = new CompilerParameters();
+            //parameters.GenerateExecutable = true;
+            //parameters.OutputAssembly = Output;
+            //CompilerResults results = icc.CompileAssemblyFromSource(parameters, SourceString);
+
+            //compiler.CompileAssemblyFromSource()
+
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, CSharpParseOptions.Default);
+
             CSharpCompilation localCompilationTest = CSharpCompilation.Create("AssemblyName")
                 .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
                 .AddReferences(
@@ -310,33 +255,20 @@ namespace Airtable.Controllers
                     MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "netstandard.dll")),
                     MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Linq.Expressions.dll")),
                     MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Threading.Tasks.dll")),
-                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")));
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Collections.dll")),
+                    MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")))
+                        .AddSyntaxTrees(syntaxTree);
 
-            localCompilationTest.AddSyntaxTrees(CSharpSyntaxTree.ParseText(
-                                    @"using MongoDB.Driver;
-                                    using MongoDB.Bson;
-                                    using System.Linq;
-                                    dasdasdasdsa
-                                    public static class ClassName 
-                                    { 
-                                        public static void MethodName()
-                                        {
-                                            var client = new MongoClient(""mongodb://localhost:27017"");
-
-
-                                            var newInsert = new BsonDocument();
-
-                                            newInsert.Add(""test1"", ""as"");
-
-                                            client.GetDatabase(""test"").GetCollection<BsonDocument>(""test2"").InsertOne(newInsert);
-                                        }
-                                    }"
-                ));
+            //localCompilationTest.AddSyntaxTrees(syntaxTree);
+            //localCompilationTest.SyntaxTrees.Add(syntaxTree);
 
             using (var memoryStream = new MemoryStream())
             {
                 var emitResult = localCompilationTest.Emit(memoryStream);
-                var assembly = Assembly.Load(memoryStream.ToArray());
+                //var assembly = Assembly.Load(memoryStream.ToArray());
+
+                //assembly.GetType("ClassName").GetMethod("MethodName").Invoke(null, null);
+
                 if (emitResult.Success)
                 {
                     return Ok("Compilation successful!");
