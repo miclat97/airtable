@@ -230,17 +230,6 @@ namespace Airtable.Controllers
 
             var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
 
-            //var xyz = new CSharpCodeProvider();
-
-            //var compiler = xyz.CreateCompiler();
-
-            //System.CodeDom.Compiler.CompilerParameters parameters = new CompilerParameters();
-            //parameters.GenerateExecutable = true;
-            //parameters.OutputAssembly = Output;
-            //CompilerResults results = icc.CompileAssemblyFromSource(parameters, SourceString);
-
-            //compiler.CompileAssemblyFromSource()
-
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, CSharpParseOptions.Default);
 
             CSharpCompilation localCompilationTest = CSharpCompilation.Create("AssemblyName")
@@ -259,15 +248,10 @@ namespace Airtable.Controllers
                     MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")))
                         .AddSyntaxTrees(syntaxTree);
 
-            //localCompilationTest.AddSyntaxTrees(syntaxTree);
-            //localCompilationTest.SyntaxTrees.Add(syntaxTree);
 
             using (var memoryStream = new MemoryStream())
             {
                 var emitResult = localCompilationTest.Emit(memoryStream);
-                //var assembly = Assembly.Load(memoryStream.ToArray());
-
-                //assembly.GetType("ClassName").GetMethod("MethodName").Invoke(null, null);
 
                 if (emitResult.Success)
                 {
